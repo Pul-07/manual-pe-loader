@@ -1,0 +1,4 @@
+nasm -f win64 syscalls.asm -o syscalls.o
+x86_64-w64-mingw32-gcc loader.c syscalls.o -o UniversalLoader.exe -Wall -O2 -lntdll -lruntimeobject
+python3 packager.py calc.exe 123
+.\UniversalLoader.exe payload.bin 123
