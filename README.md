@@ -1,147 +1,95 @@
-Manual PE Loader – Research Project
-📌 Overview
+# Manual PE Loader
 
-This project is an educational manual PE loader for Windows, written to study and understand how the Windows loader works internally.
+**Manual PE Loader** is an *educational research project* that demonstrates how **native Windows PE files** can be manually loaded and executed in memory **without using the default Windows loader**.
 
-It demonstrates how a Portable Executable (PE) can be:
+> This project focuses on **understanding**, not replacing, the Windows loader.
 
-loaded manually in memory,
+---
 
-relocated,
+## 📌 Overview
 
-linked,
+This loader implements a **minimal but realistic PE loading pipeline**, including:
 
-initialized,
+- Manual memory mapping
+- Relocations
+- Import resolution
+- TLS callbacks
+- x64 SEH registration
+- EXE vs DLL entry handling
 
-and executed without relying on CreateProcess or the default loader path.
+It is intended for **learning, reverse engineering, and OS internals research**.
 
-⚠️ This project is intended for research, learning, and defensive understanding only.
+---
 
-🎯 Goals of the Project
+## 🎯 Project Goals
 
-The purpose of this loader is to explore:
+- Learn how the **Portable Executable (PE)** format works
+- Understand what the Windows loader *requires* vs *assumes*
+- Study manual relocation and import resolution
+- Observe TLS and exception handling behavior
+- Explore NT-level execution mechanics
 
-Windows PE format internals
+---
 
-Manual memory mapping
+## 🔁 Loader Workflow
 
-Relocations and imports resolution
+1. **Validate PE headers**
+   - DOS header (`MZ`)
+   - NT header (`PE`)
+2. **Allocate memory** for the image
+3. **Copy headers and sections**
+4. **Apply relocations** if needed
+5. **Resolve imports**
+   - By name
+   - By ordinal
+6. **Execute TLS callbacks**
+7. **Register x64 exception tables**
+8. **Apply final memory protections**
+9. **Update PEB ImageBaseAddress**
+10. **Execute entry point**
+    - EXE → entry point
+    - DLL → `DllMain(DLL_PROCESS_ATTACH)`
 
-TLS callbacks handling
+---
 
-x64 SEH / exception registration
+## 📦 Supported Binary Types
 
-Entry point logic for EXE vs DLL
+| Binary type | Supported |
+|------------|-----------|
+| Native EXE (x64) | ✅ Yes (many cases) |
+| Native DLL | ✅ Yes |
+| Complex native EXE | ⚠️ Partial |
+| .NET / C# EXE | ❌ No |
+| Mixed-mode (C++/CLI) | ❌ No |
 
-The minimal requirements for a PE to run correctly
+### ❓ Why .NET binaries are not supported
 
-Differences between what is required vs what is optional in the Windows loader
+.NET executables do **not** contain a real native entry point.  
+They require **CLR hosting** and runtime initialization, which is outside the scope of a native PE loader.
 
-This is not meant to be a replacement for the Windows loader.
+---
 
-🧠 High-Level Architecture
+## ⚙️ Syscall (Research Aspect)
 
-The loader follows these main steps:
+This project includes a **minimal syscall invocation stub** to study:
 
-PE validation
+- Windows x64 calling conventions
+- Shadow space requirements
+- NT system call behavior
 
-DOS header (MZ)
+Example (conceptual):
 
-NT header (PE)
+```asm
+mov r10, rcx
+mov eax, SSN
+syscall
 
-Architecture consistency
 
-Memory allocation
-
-Allocate memory for the full image
-
-Copy headers and sections
-
-Relocations
-
-Apply base relocations if the image is not loaded at its preferred base
-
-Import resolution
-
-Resolve imports by name
-
-Resolve imports by ordinal
-
-Load required DLLs
-
-TLS callbacks
-
-Execute TLS callbacks before the entry point
-
-Pass DLL_PROCESS_ATTACH when applicable
-
-Exception handling (x64)
-
-Register the exception directory using RtlAddFunctionTable
-
-Required for proper stack unwinding and stability
-
-Memory protections
-
-Apply final section protections (RX / RW / R)
-
-Transition from writable mapping to execution-safe memory
-
-PEB adjustment
-
-Update PEB->ImageBaseAddress using NtQueryInformationProcess
-
-Avoids hardcoded offsets and improves portability
-
-Execution
-
-EXE: call the entry point directly
-
-DLL: call DllMain(DLL_PROCESS_ATTACH)
-
-🧩 Supported Binary Types
-Binary Type	Supported
-Native EXE (x64)	✅ Yes (many cases)
-Native DLL	✅ Yes
-Complex native EXE	⚠️ Depends on features used
-.NET / C# EXE	❌ No
-Mixed-mode (C++/CLI)	❌ No
-Why .NET binaries are not supported
-
-.NET executables do not contain a real native entry point.
-They require:
-
-CLR initialization
-
-_CorExeMain
-
-Runtime hosting
-
-This loader is a native PE loader, not a CLR host.
-
-⚙️ Syscall Usage (Research Aspect)
-
-The project includes a minimal syscall invocation stub to study:
-
-Windows x64 calling conventions
-
-Shadow space handling
-
-Direct interaction with NT system calls
-
-The syscall logic is implemented in assembly and follows the x64 ABI:
-
-RCX → R10
-
-SSN loaded into EAX
-
-Proper stack alignment and cleanup
-
-This is used only to study NT internals, not to replace standard APIs.
+This is included strictly for educational purposes.
 
 ⚠️ Known Limitations
 
-This loader intentionally does not implement:
+This loader does not implement:
 
 Loader lists (PEB->Ldr)
 
@@ -149,41 +97,33 @@ Loader lock synchronization
 
 Full CRT initialization
 
-Delay-load import handling
+Delay-load imports
 
 Dependency graph resolution
 
-Thread notifications (PROCESS_DETACH)
+Process detach notifications
 
-Full process environment setup
+Because of this, some valid PE files may not execute correctly.
 
-As a result:
-
-Some valid PE files will not run
-
-Behavior may vary depending on Windows version and binary complexity
-
-This is expected and by design.
-
-🧪 Why Many Binaries Still Work
+🧠 Why Many Binaries Still Work
 
 Many native binaries:
 
-do not rely on the CRT
+Are self-contained
 
-do not use delay imports
+Do not depend on the CRT
 
-do not inspect loader lists
+Do not rely on loader lists
 
-only require basic PE initialization
+Require only minimal PE initialization
 
-The Windows loader itself is tolerant, and this project leverages that fact.
+The Windows loader itself is tolerant, and this project reflects that reality.
 
-📚 Educational Value
+📚 Educational Scope
 
-This project is useful to understand:
+This project helps illustrate:
 
-How PE files really start executing
+How PE files actually start executing
 
 Why relocations and imports matter
 
@@ -193,25 +133,44 @@ Why SEH registration is mandatory on x64
 
 Why .NET binaries are fundamentally different
 
-What Windows actually requires vs assumes
+Where the Windows loader draws the line
 
 ⚖️ Disclaimer
 
 This repository is provided for educational and research purposes only.
 
-The author does not encourage or support:
+It is not intended for:
 
-unauthorized use
+malicious use
 
-bypassing security mechanisms
+security bypassing
 
-misuse in production environments
+production deployment
 
-Use responsibly and legally.
+Use responsibly and in compliance with applicable laws.
 
-🧠 Final Note
+✨ Final Note
 
-This project is not about bypassing Windows,
-it is about understanding how Windows works.
+This project is not about bypassing Windows.
+It is about understanding how Windows works internally.
 
-“Once you know what is optional, you understand what is essential.”
+Once you understand what is optional, you understand what is essential.
+
+
+---
+
+### Ce README utilise volontairement :
+- `# ## ###` → titres
+- `**gras**`, *italique*
+- `` `inline code` ``
+- blocs de code ``` ```
+- listes ordonnées / non ordonnées
+- tableaux
+- citations `>`
+- emojis GitHub compatibles
+
+Si tu veux, je peux maintenant :
+- le **raccourcir**
+- le **traduire en français**
+- faire une version **ultra académique**
+- ou une version **étudiant / rapport**
