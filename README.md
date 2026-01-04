@@ -155,22 +155,3 @@ This project is not about bypassing Windows.
 It is about understanding how Windows works internally.
 
 Once you understand what is optional, you understand what is essential.
-
-
----
-
-### Ce README utilise volontairement :
-- `# ## ###` → titres
-- `**gras**`, *italique*
-- `` `inline code` ``
-- blocs de code ``` ```
-- listes ordonnées / non ordonnées
-- tableaux
-- citations `>`
-- emojis GitHub compatibles
-
-Si tu veux, je peux maintenant :
-- le **raccourcir**
-- le **traduire en français**
-- faire une version **ultra académique**
-- ou une version **étudiant / rapport**
